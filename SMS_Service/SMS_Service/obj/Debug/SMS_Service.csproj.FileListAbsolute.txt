@@ -1,0 +1,14 @@
+C:\Users\joseph.aguilar\Desktop\NEW DEVELOPMENT\WINDOWS APPLICATION\SMS_Service\SMS_Service\bin\Debug\SMS_Service.exe.config
+C:\Users\joseph.aguilar\Desktop\NEW DEVELOPMENT\WINDOWS APPLICATION\SMS_Service\SMS_Service\bin\Debug\SMS_Service.exe
+C:\Users\joseph.aguilar\Desktop\NEW DEVELOPMENT\WINDOWS APPLICATION\SMS_Service\SMS_Service\bin\Debug\SMS_Service.pdb
+C:\Users\joseph.aguilar\Desktop\NEW DEVELOPMENT\WINDOWS APPLICATION\SMS_Service\SMS_Service\obj\Debug\SMS_Service.csprojResolveAssemblyReference.cache
+C:\Users\joseph.aguilar\Desktop\NEW DEVELOPMENT\WINDOWS APPLICATION\SMS_Service\SMS_Service\obj\Debug\SMS_Service.Form1.resources
+C:\Users\joseph.aguilar\Desktop\NEW DEVELOPMENT\WINDOWS APPLICATION\SMS_Service\SMS_Service\obj\Debug\SMS_Service.Properties.Resources.resources
+C:\Users\joseph.aguilar\Desktop\NEW DEVELOPMENT\WINDOWS APPLICATION\SMS_Service\SMS_Service\obj\Debug\SMS_Service.csproj.GenerateResource.Cache
+C:\Users\joseph.aguilar\Desktop\NEW DEVELOPMENT\WINDOWS APPLICATION\SMS_Service\SMS_Service\obj\Debug\SMS_Service.exe
+C:\Users\joseph.aguilar\Desktop\NEW DEVELOPMENT\WINDOWS APPLICATION\SMS_Service\SMS_Service\obj\Debug\SMS_Service.pdb
+C:\Users\joseph.aguilar\Desktop\NEW DEVELOPMENT\WINDOWS APPLICATION\SMS_Service\SMS_Service\bin\Debug\Newtonsoft.Json.dll
+C:\Users\joseph.aguilar\Desktop\NEW DEVELOPMENT\WINDOWS APPLICATION\SMS_Service\SMS_Service\bin\Debug\Newtonsoft.Json.xml
+C:\Users\joseph.aguilar\Desktop\NEW DEVELOPMENT\WINDOWS APPLICATION\SMS_Service\SMS_Service\bin\Debug\MySql.Data.dll
+C:\Users\joseph.aguilar\Desktop\NEW DEVELOPMENT\WINDOWS APPLICATION\SMS_Service\SMS_Service\bin\Debug\MySql.Data.xml
+C:\Users\joseph.aguilar\Desktop\NEW DEVELOPMENT\WINDOWS APPLICATION\SMS_Service\SMS_Service\obj\Debug\SMS_Service.Settings.DB_Connection.resources
