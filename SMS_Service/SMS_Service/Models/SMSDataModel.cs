@@ -27,7 +27,7 @@ namespace SMS_Service.Models
             _sendernumber = device_model.ContactNumber;
             ReceiverCNumber = _receiverNo;
             // _sent_receive_datetime
-            _sent_receive_datetime = DateTime.Now.ToShortDateString();
+            _sent_receive_datetime = DateTime.Now.ToString("MM/dd/yyyy hh:mm:ss tt");
             _message = message;
             _sendingtype = sendingtype;
         }
@@ -45,12 +45,15 @@ namespace SMS_Service.Models
             _sendingtype = sendingtype;
         }
 
+        public int RefID { get; set; }
         public bool Sending { get; set; }
         public int RankPriority { get; set; } //The higher the number the more priority.
         public string ReadRef { get; set; }
-        public int DataID { get; set; }
+        public uint DataID { get; set; }
         public string DevicePortName { get; set; }
         public string DeviceCNumber { get; set; }
+
+        public bool StatusUpdating { get; set; }
 
         public List<string> DynamicFailedNumberSends { get; set; } = new List<string>();
 

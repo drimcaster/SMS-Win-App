@@ -8,13 +8,14 @@ namespace SMS_Service.Models
 {
     public class ReceivedMessagesModel
     {
-        public int id { get; set; }
-        public string app_name { get; set; }
-        public int status_id { get; set; }
+        public uint id { get; set; }
+
+        //public string app_name { get; set; }
+        //public int status_id { get; set; }
         public string sender_no { get; set; }
         public string receiver_no { get; set; }
         public string message { get; set; }
-        public int support_id { get; set; }
+        //public int focus_id { get; set; }
         public string received_app_at { get; set; }
         public string received_mobile_at { get; set; }
 

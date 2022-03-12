@@ -46,12 +46,14 @@ namespace SMS_Service.SimClasses
 
             if (SimDevice == null)
             { 
+               
                 SendResult?.Invoke( SimDevice, toSendData, false, "Device Not Found!");
                 return false;
             }
                 //throw new Exception("Pl");
             if(toSendData != null)
             {
+                SimDevice.CurrentSMSData = toSendData;
                 toSendData.SetMStatus(MStatusTypes.Sending);
                 SMSNotificationHelper.NotifyMessage?.Invoke(toSendData);
             }
@@ -63,23 +65,32 @@ namespace SMS_Service.SimClasses
                 _SPort.DiscardOutBuffer();
                 _SPort.WriteLine("AT+CMGF=1");
                 //System.Threading.Thread.Sleep(100);
-                _SPort.WriteLine("AT+CMGS=\"+" + Number + "\"");
+                _SPort.WriteLine("AT+CMGS=\"" + Number + "\"");
                 _SPort.WriteLine(Message + ((char)26).ToString());
 
                 //if (toSendData == null)
-                 System.Threading.Thread.Sleep(8000);
-                
-                string str = Helpers.ResultHelper.getPortResult(_SPort, 0, SimDevice);
+                //System.Threading.Thread.Sleep(8000);
+
+                string str = "";
+                int limit_counter = 0;
+                while (true)
+                {
+                   str = Helpers.ResultHelper.getPortResult(_SPort, 1000, SimDevice);
+                    if (str.Trim() == "OK" || str.Trim() == "ERROR")
+                        break;
+                    else if (limit_counter == 10)
+                        break;
+                    limit_counter++;
+                }
                 SimDevice.SetSending(false);
                 SimDevice.ReadyToSend = true;
-
-
+                
                 SMSDataModel _SmsData = toSendData ?? new SMSDataModel(SimDevice, Number, Message);
                 _SmsData.SetMStatus(MStatusTypes.Sending);
                 SMSNotificationHelper.NotifyMessage?.Invoke(_SmsData);
                 _SmsData.SendLastAttempt = DateTime.Now;
 
-                if (str.Trim() == "OK")
+                if (str.Trim() == "OK" || _SmsData.MStatus == MStatusTypes.Success)
                 {
                     _SmsData.SetMStatus(MStatusTypes.Success);
                     SMSNotificationHelper.NotifyMessage?.Invoke(_SmsData);
@@ -87,8 +98,9 @@ namespace SMS_Service.SimClasses
                     SimDevice.ErrorCount = 0;
                     return true;
                 }
-                else
+                else 
                 {
+                   
                     _SmsData.SetMStatus(MStatusTypes.Failed);
                     _SmsData.DynamicFailedNumberSends.Add(_SmsData.DeviceCNumber);
                     SMSNotificationHelper.NotifyMessage?.Invoke(_SmsData);

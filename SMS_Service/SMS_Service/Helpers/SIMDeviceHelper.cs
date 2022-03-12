@@ -123,6 +123,7 @@ namespace SMS_Service.Helpers
             serial.Open();
             serial.WriteLine("AT+CNUM");
             string[] result = (ResultHelper.getPortResults(serial, 400, sim_device).Select(s => s.Trim()).Where(s => s.Length > 5 && s.Substring(0, 5) == "+CNUM").ToArray().FirstOrDefault<string>() ?? "").Replace('"', ' ').Split(',').Where(s => s.Trim() != String.Empty).Select(s => s.Trim()).ToArray<string>();//.Where(str => str.Trim().Substring("+CNUM";
+            
             serial.Close();
 
             if (result.Length > 1)
@@ -145,6 +146,15 @@ namespace SMS_Service.Helpers
             serial.Open();
             serial.WriteLine("AT+COPS?");
             string[] result = (ResultHelper.getPortResults(serial, 400, sim_device).Select(s => s.Trim()).Where(s => s.Length > 5 && s.Substring(0, 5) == "+COPS").ToArray().FirstOrDefault<string>() ?? "").Replace('"', ' ').Split(',').Where(s => s.Trim() != String.Empty).Select(s => s.Trim()).ToArray<string>();//.Where(str => str.Trim().Substring("+CNUM";
+
+            //serial  SET THE NOTIFICATION
+            serial.WriteLine("AT+CNMI=2");
+            serial.WriteLine("AT+CMGF=1");
+            serial.WriteLine("AT+CMGDA=\"DEL ALL\"");
+            ResultHelper.getPortResults(serial, 400, sim_device);
+            //serial clear all messages
+
+
             serial.Close();
 
             if (result.Length > 2)
@@ -186,11 +196,24 @@ namespace SMS_Service.Helpers
             foreach(Models.SIMDeviceModel dev in simContact)
             {
                 dev.Serial.Open();
+                if (GlobalHelpers.MainForm != null)
+                    dev.DeviceNotify = GlobalHelpers.MainForm.Notifcation;
             }
 
 
             GlobalHelpers.RegisteredSIMDeviceList.AddRange(simContact);
 
+        }
+
+        public static void RemoveDeviceRecord(SIMDeviceModel sim_device, int record_id)
+        {
+
+            var toRemove = sim_device.SMSData.Where(smsdata => (smsdata.ReadRef.Trim()) == "AT+CMGR=" + record_id).FirstOrDefault();
+            if (toRemove != null)
+                sim_device.SMSData.Remove(toRemove);
+
+            sim_device.Serial.WriteLine("AT+CMGD=" + record_id);
+            ResultHelper.getPortResults(sim_device.Serial, 100, sim_device);
         }
 
 

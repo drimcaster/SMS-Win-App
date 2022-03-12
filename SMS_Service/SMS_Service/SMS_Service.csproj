@@ -74,7 +74,9 @@
     <Compile Include="Models\Enums.cs" />
     <Compile Include="Models\ComputerPortModel.cs" />
     <Compile Include="Models\MySqlData.cs" />
+    <Compile Include="Models\MySQLResultModel.cs" />
     <Compile Include="Models\ReceivedMessagesModel.cs" />
+    <Compile Include="Models\SentMessageStatusModel.cs" />
     <Compile Include="Models\SIMDeviceModel.cs" />
     <Compile Include="Models\SMSDataModel.cs" />
     <Compile Include="Models\ToSendMessageModel.cs" />

@@ -58,7 +58,9 @@ namespace SMS_Service.Helpers
 
             var smsData = new Models.SMSDataModel()
             {
-                DataID = message_id,
+                //DataID = message_id,
+                DataID = 0,
+                RefID = message_id,
                 ReadRef = ("AT+CMGR=" + message_id),
                 DevicePortName = simdevice.ComputerPort.PortName,
                 DeviceCNumber = simdevice.ContactNumber,
@@ -66,8 +68,8 @@ namespace SMS_Service.Helpers
 
             };
             simdevice.SMSData.Add(smsData);
-            simdevice.Serial.WriteLine("AT+CMGF=1");
-            System.Threading.Thread.Sleep(100);
+           // simdevice.Serial.WriteLine("AT+CMGF=1");
+           // System.Threading.Thread.Sleep(100);
             simdevice.Serial.WriteLine(smsData.ReadRef);
             
         }

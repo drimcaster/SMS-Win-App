@@ -80,30 +80,39 @@ namespace SMS_Service
             foreach (SIMDeviceModel sim in GlobalHelpers.RegisteredSIMDeviceList)
             {
                 sim.Serial.Open();
-                sim.DeviceNotify = (sender, status, message, received_event, error_event) =>
-                {
-                    //MessageBox.Show(message);
-                    //if(stat)
-                    string compose = "\r\n";
-                    compose += "===" + sender.ContactNumber + "===\r\n";
-                    compose += "Status: " + (status ? 1 : 0) + "\r\n";
-                    compose += "Type: " + (status ? received_event.EventType.ToString() : error_event.EventType.ToString()) + "\r\n";
-                    compose += "Content:\r\n";
-                    compose += message + "\r\n";
-                    compose += "================\r\n";
-
-                    LogString = compose + LogString;
-                    this.Invoke(new Action(() =>
-                    {
-                        txt_logs.Text = LogString;
-
-                    }));
-                    SMSNotificationHelper.ReadNotification(sim, message);
-                };
+                sim.DeviceNotify = Notifcation;
             }
+
+            GlobalHelpers.MainForm = this;
+
+
             SendDynamicMessageTimer.Enabled = true;
             reloadNewandErrorDeviceTimer.Enabled = true;
             SendMessageStageForSendingMobileTimer.Enabled = true;
+            SaveReceivedMessagesTimer.Enabled = true;
+
+        }
+
+        public void Notifcation(SIMDeviceModel device, bool success, string message, SerialDataReceivedEventArgs data_received = null, SerialErrorReceivedEventArgs error_received = null)
+        {
+
+            //MessageBox.Show(message);
+            //if(stat)
+            string compose = "\r\n";
+            compose += "===" + device.ContactNumber + "===\r\n";
+            compose += "Status: " + (success ? 1 : 0) + "\r\n";
+            compose += "Type: " + (success ? data_received.EventType.ToString() : error_received.EventType.ToString()) + "\r\n";
+            compose += "Content:\r\n";
+            compose += message + "\r\n";
+            compose += "================\r\n";
+
+            LogString = compose + LogString;
+            this.Invoke(new Action(() =>
+            {
+                txt_logs.Text = LogString;
+
+            }));
+            SMSNotificationHelper.ReadNotification(device, message);
 
         }
 
@@ -232,6 +241,7 @@ namespace SMS_Service
             //System.Diagnostics.Debug.Write(new Random().Next(1));
             //if (notBusyDevices.Count > 0)
             // {
+            int _RegisteredDevices_Count = GlobalHelpers.RegisteredSIMDeviceList.Count;
             foreach (Models.SIMDeviceModel notBusyDevice in notBusyDevices)
             {
                 List<SMSDataModel> smsDynamicList = new List<SMSDataModel>();
@@ -250,13 +260,25 @@ namespace SMS_Service
                     {
                         smsStaticList.Add(s);
                     }
-                    else if (s.SendFailedCount < GlobalHelpers.MaxResend && s.MStatus != MStatusTypes.Success && s.MStatus != MStatusTypes.Sending && s.ActionType == ActionTypes.Send && s.Sending == false && s.SendingType != SendingTypes.StaticDeviceCNumber && s.DynamicFailedNumberSends.Contains(notBusyDevice.ContactNumber) == false)
+                    else if (s.SendFailedCount < GlobalHelpers.MaxResend && s.MStatus != MStatusTypes.Success && s.MStatus != MStatusTypes.Sending && s.ActionType == ActionTypes.Send && s.Sending == false && s.SendingType != SendingTypes.StaticDeviceCNumber && (_RegisteredDevices_Count == 1 || s.DynamicFailedNumberSends.Contains(notBusyDevice.ContactNumber) == false ))
                     {
                         //s.Sending = true;
                         //The condition that will prevent the Sending Type == None to just only send once.
                         if (s.SendingType == SendingTypes.None && s.SendFailedCount > 0)
                             continue;
+                        
+
+                        //Retry already sent but lacking of device.
+                        int recursiveSendCount = 1 + (GlobalHelpers.MaxResend - _RegisteredDevices_Count);
+
+                        if (s.SendFailedCount > 0 &&  s.SendFailedCount <= recursiveSendCount  )
+                        {
+                            var toRemove = s.DynamicFailedNumberSends.FirstOrDefault();
+                            if (toRemove != null)
+                                s.DynamicFailedNumberSends.Remove(toRemove);
+                        }
                         smsDynamicList.Add(s);
+
                     }
 
                 }
@@ -273,7 +295,8 @@ namespace SMS_Service
                 }
                 if (toSendData == null)
                 {
-                    toSendData = smsDynamicList.Where(smsItem => smsItem.DeviceCNumber == notBusyDevice.ContactNumber).OrderByDescending(dev => dev.RankPriority).ThenBy(dev => dev.SendLastAttempt).FirstOrDefault();
+                    //Where(smsItem => smsItem.DeviceCNumber == notBusyDevice.ContactNumber)
+                    toSendData = smsDynamicList.OrderByDescending(dev => dev.RankPriority).ThenBy(dev => dev.SendLastAttempt).FirstOrDefault();
                 }
 
                 if (toSendData == null)
@@ -306,6 +329,13 @@ namespace SMS_Service
 
         private void reloadNewandErrorDevice_Tick(object sender, EventArgs e)
         {
+           // foreach( var device in GlobalHelpers.ActiveSIMDeviceList)
+          //  {
+                //if (device.IsBusy == false && device.ErrorCount < 4)
+                //    device.Serial.WriteLine("AT");
+           // }
+
+
             BackgroundWorker bg = new BackgroundWorker();
             bg.DoWork += Bg_DoWork;
             bg.RunWorkerAsync();
@@ -472,31 +502,159 @@ namespace SMS_Service
 
         private void SaveReceivedMessages_Tick(object sender, EventArgs e)
         {
+            if (MySQL.Connected == false || MySQL.IsBusy == true) return;
+
             SaveReceivedMessagesTimer.Enabled = false;
+            
+            var smsReceivedList = new List<SMSDataModel>();
+            //Use for putting ID on row
+            uint max_id = 0;
+            foreach (DataGridViewRow dgvr in dataGridView1.Rows)
+            {
+                var smsItem = dgvr.Tag as SMSDataModel;
+                if (smsItem == null)
+                    continue;
+
+                if (smsItem.ActionType == ActionTypes.Receive && smsItem.DataID == 0)
+                {
+                    smsReceivedList.Add(smsItem);
+                }
+                else if (smsItem.ActionType == ActionTypes.Receive && max_id > smsItem.DataID)
+                {
+                    max_id = smsItem.DataID;
+                }
+            }
+            if (smsReceivedList.Count == 0)
+            {
+                SaveReceivedMessagesTimer.Enabled = true;
+                return;
+            }
+
+            //set max_id = increment to 1;
+            //max_id++;
+            foreach (SMSDataModel s in smsReceivedList)
+            {
+                s.DataID = max_id++;
+            }
 
             BackgroundWorker bg = new BackgroundWorker();
-            bg.DoWork += (sen, evt) => {
-
-                //Sending messages to the server upto 20
-
-
-
-                //Reactivating the sending messages
-                this.Invoke(new Action(() =>
+            bg.DoWork += (sen, evt) =>
                 {
-                    SaveReceivedMessagesTimer.Enabled = true;
-                }));
 
-            };
+                    //Sending messages to the server upto 20
+                    List<Models.ReceivedMessagesModel> receivedMessage = new List<ReceivedMessagesModel>();
+
+                    foreach (SMSDataModel smsItem in smsReceivedList)
+                    {
+
+                        receivedMessage.Add(
+                            new ReceivedMessagesModel()
+                            {
+                                id = smsItem.DataID,
+                                message = smsItem.Message,
+                                received_app_at = smsItem.SendLastAttempt.ToString("MM/dd/yyyy hh:mm:ss tt"),
+                                received_mobile_at = smsItem.ActionDateTime,
+                                receiver_no = smsItem.ReceiverCNumber,
+                                sender_no = smsItem.SenderCNumber
+
+                            }
+                       );
+
+                    }
+
+                    uint[] toDeleteIDs = MySQL.ReceivedMessage(receivedMessage);
+                    //GET DEVICE TO REMOVE RECORD
+                    var removeReceivedToRemoveList = smsReceivedList.Where(sms => toDeleteIDs.Contains(sms.DataID));
+                    foreach(var sms in removeReceivedToRemoveList)
+                    {
+                        var sDevice = GlobalHelpers.ActiveSIMDeviceList.Where(device => device.ContactNumber == sms.ReceiverCNumber).FirstOrDefault();
+                        if (sDevice == null)
+                            continue;
+                        Helpers.SIMDeviceHelper.RemoveDeviceRecord(sDevice, sms.RefID);
+
+                    }
+
+
+
+
+                    //Reactivating the sending messages
+                    this.Invoke(new Action(() =>
+                    {
+
+                        if (toDeleteIDs.Length > 0)
+                        {
+                            foreach (DataGridViewRow toDelteRow in dataGridView1.Rows)
+                            {
+                                SMSDataModel sms_item = toDelteRow.Tag as SMSDataModel;
+                                if (sms_item == null) continue;
+
+                                if (sms_item.ActionType == ActionTypes.Receive && toDeleteIDs.Contains(sms_item.DataID))
+                                    dataGridView1.Rows.Remove(toDelteRow);
+
+                            }
+                        }
+                        var failedSavingSMS = smsReceivedList.Where(sms => toDeleteIDs.Contains(sms.DataID) == false);
+                        foreach(var failed in failedSavingSMS)
+                        {
+                            failed.DataID = 0;
+                        }
+
+
+                        SaveReceivedMessagesTimer.Enabled = true;
+                    }));
+
+                };
             bg.RunWorkerAsync();
+
+
         }
 
         private void SendMessagesToMobileTimer_Tick(object sender, EventArgs e)
         {
             SendMessageStageForSendingMobileTimer.Enabled = false;
-            if (MySQL.Connected)
+            if (MySQL.Connected && MySQL.IsBusy == false)
             {
-                
+
+                List<SentMessageStatusModel> sentStatusList = new List<SentMessageStatusModel>();
+
+                //GET DATATABLE ROW SEND
+                foreach(DataGridViewRow row in dataGridView1.Rows)
+                {
+                    SMSDataModel sms = row.Tag as SMSDataModel;
+                    if (sms == null) continue;
+
+                    if (sms.DataID > 0 && sms.ActionType == ActionTypes.Send && sms.StatusUpdating == false)
+                    {
+                        SentMessageStatusModel _stat = new SentMessageStatusModel();
+                        _stat.id = sms.DataID;
+                        _stat.sender_no = sms.SenderCNumber;
+                        _stat.sent_mobile_at = sms.SendLastAttempt.ToString("MM/dd/yyyy hh:mm:ss tt");// sms.ActionDateTime;
+                        if (sms.MStatus == MStatusTypes.Success)
+                        {
+                            _stat.status_id = 2;
+                        }
+                        else if (sms.MStatus == MStatusTypes.Failed && sms.SendFailedCount >= 3)
+                        {
+                            _stat.status_id = 3;
+                        }
+                        else if (sms.MStatus == MStatusTypes.Failed && sms.SendingType == SendingTypes.DynamicDeviceCNumber && sms.SendFailedCount >= 3)
+                        {
+                            _stat.status_id = 3;
+                        }
+                        else if (sms.MStatus == MStatusTypes.Failed && sms.SendingType == SendingTypes.None && sms.SendFailedCount == 1)
+                            _stat.status_id = 3;
+
+                        if (_stat.status_id > 1)
+                        {
+                            sms.StatusUpdating = true;
+                            sentStatusList.Add(_stat);
+                        }
+                    }
+
+                }
+
+
+
                 BackgroundWorker bg = new BackgroundWorker();
                 bg.DoWork += (sen, evt) =>
                 {
@@ -506,7 +664,26 @@ namespace SMS_Service
                         this.Invoke(new Action(() => { SendMessageStageForSendingMobileTimer.Enabled = true; }));
                         return;
                     }
-                    List<Models.ToSendMessageModel> toSendList = MySQL.GetToSendMessages();
+                
+                    List<Models.ToSendMessageModel> toSendList = MySQL.GetToSendMessages(sentStatusList);
+
+                    this.Invoke(new Action(() => {
+
+                        foreach (SentMessageStatusModel sentItem in sentStatusList)
+                        {
+                            foreach (DataGridViewRow row in dataGridView1.Rows)
+                            {
+                                SMSDataModel sms = row.Tag as SMSDataModel;
+                                if (sms == null) continue;
+
+                                if (sentItem.id == sms.DataID)
+                                    dataGridView1.Rows.Remove(row);
+                            }
+                        }
+
+
+
+                    }));
 
                     //CONVERT TO toSendMessagesinto
 
@@ -533,23 +710,26 @@ namespace SMS_Service
                                 continue;
                             }
                         }
-                        else if (toSendItem.sending_type_id == 2)
+                        else
                         {
                             //for Dynamic
                             device = GlobalHelpers.ActiveSIMDeviceList.ElementAt(i % activeDeviceCount);
-                            sendType = SendingTypes.DynamicDeviceCNumber;
+                            if (toSendItem.sending_type_id <= 2)
+                                sendType = SendingTypes.DynamicDeviceCNumber;
+                            else
+                                sendType = SendingTypes.None;
                         }
 
 
-
                         SMSDataModel smsItem = new SMSDataModel(device, toSendItem.receiver_no, toSendItem.message, sendType);
+                        smsItem.DataID = toSendItem.id;
                         smsdataList.Add(smsItem);
 
                     }
 
                     System.Threading.Thread.Sleep(500);
                     this.Invoke(new Action(() => {
-
+                        
                         //Adding Row
                         foreach (var sms in smsdataList)
                         {

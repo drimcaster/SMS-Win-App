@@ -29,7 +29,7 @@ namespace SMS_Service.Models
                 con_str += "port=" + _propSet.TEST_PORT + ";";
                 con_str += "user=" + _propSet.TEST_USER + ";";
                 con_str += "password=" + _propSet.TEST_PASSWORD + ";";
-                con_str += "database=" + _propSet.DB + ";";
+                con_str += "database=" + _propSet.TEST_DB + ";";
                 con_str += "SslMode=" + _propSet.TEST_SSL + ";";
             }
             else
@@ -59,39 +59,71 @@ namespace SMS_Service.Models
         private bool _isTest = false;
         public bool IsTest => _isTest;
 
-      /// <summary>
-      /// Sending the messages to the server for analysis
-      /// </summary>
-      /// <param name="received_messages">To be send to server</param>
-      /// <returns>Returns the IDs that has successfully saved to the server </returns>
-        public int[] ReceivedMessage(List<Models.ReceivedMessagesModel> received_messages)
+        public bool IsBusy { get; set; }
+
+        /// <summary>
+        /// Sending the messages to the server for analysis
+        /// </summary>
+        /// <param name="received_messages">To be send to server</param>
+        /// <returns>Returns the IDs that has successfully saved to the server </returns>
+        public uint[] ReceivedMessage(List<Models.ReceivedMessagesModel> received_messages)
         {
+            //spReceivedMessage
+            if (received_messages.Count <= 0)
+                return new uint[0];
+
+            MySqlCommand command = new MySqlCommand("spReceivedMessage", _MySQLCon);
+            command.CommandType = System.Data.CommandType.StoredProcedure;
+            command.Parameters.AddWithValue("_JSON", Newtonsoft.Json.JsonConvert.SerializeObject(received_messages));
+            if (IsBusy)
+                return new uint[0];
+            IsBusy = true;
+            _MySQLCon.Open();
+            MySqlDataReader read = command.ExecuteReader();
 
 
-
-            return null;
+            //List<Models.ToSendMessageModel> tosendList = new List<ToSendMessageModel>();
+            read.Read();
+            JObject jo = new JObject();
+            for (int i = 0; i < read.FieldCount; i++)
+            {
+                JProperty prop = new JProperty(read.GetName(i), read[i]);
+                jo.Add(prop);
+            }
+            var result = jo.ToObject<MySQLResultModel>();
+            //tosendList.Add(item);
+            _MySQLCon.Close();
+            IsBusy = false;
+            //return tosendList;
+            
+            return Newtonsoft.Json.JsonConvert.DeserializeObject<uint[]>(result.DataID);
         }
 
         public void UpdateSentStatus(List<Models.ToSendMessagesStatusModel> toSendStatusList)
         {
 
-
+            
 
 
 
         }
 
 
-        public List<Models.ToSendMessageModel> GetToSendMessages()
+        public List<Models.ToSendMessageModel> GetToSendMessages(List<Models.SentMessageStatusModel> sentStatusList)
         {
             MySqlCommand command = new MySqlCommand("spToSendMessages", _MySQLCon);
             command.CommandType = System.Data.CommandType.StoredProcedure;
             command.Parameters.AddWithValue("_ISAPPGET", 1);
+            command.Parameters.AddWithValue("_JStatusList", Newtonsoft.Json.JsonConvert.SerializeObject(sentStatusList));
+            //if(_MySQLCon.)
+            List<Models.ToSendMessageModel> tosendList = new List<ToSendMessageModel>();
+            if (IsBusy)
+                return tosendList;
+            IsBusy = true;
             _MySQLCon.Open();
             MySqlDataReader read = command.ExecuteReader();
 
 
-            List<Models.ToSendMessageModel> tosendList = new List<ToSendMessageModel>();
             while (read.Read())
             {
                 JObject jo = new JObject();
@@ -104,6 +136,7 @@ namespace SMS_Service.Models
                 tosendList.Add(item);
             }
             _MySQLCon.Close();
+            IsBusy = false;
             return tosendList;
         }
 

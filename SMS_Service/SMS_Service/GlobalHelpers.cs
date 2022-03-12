@@ -23,6 +23,8 @@ namespace SMS_Service
 
         public static readonly string[] MessagePrefix = { "+CMTI: \"SM\",", "+CMTI: \"ME\"," };
 
+        public static SMS_Service.Form1 MainForm { get; set; }
+
     }
     
 }

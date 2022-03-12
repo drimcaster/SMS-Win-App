@@ -39,7 +39,7 @@ namespace SMS_Service.Models
                 }
             }
         }
-
+        
         public string StateInfo
         {
             get {
@@ -114,7 +114,7 @@ namespace SMS_Service.Models
         }
 
         public DateTime LastReconnectAt { get; set; } = DateTime.Now;
-        public bool IsReconnecting { get; set; } = false; 
+        public bool IsReconnecting { get; set; } = false;
         public bool ReconnectDevice()
         {
             if (IsReconnecting)
@@ -156,7 +156,7 @@ namespace SMS_Service.Models
 
             /*GETTING THE DEVICE MODEL*/
             _SPort.WriteLine("AT+CGMM");
-            result  = Helpers.ResultHelper.getPortResults(_SPort, 300, this).Select(s => s.Trim()).Where(s => s.Length > 5 && s.Substring(0, 6) == "SIMCOM").ToArray().FirstOrDefault<string>() ?? "";
+            result = Helpers.ResultHelper.getPortResults(_SPort, 300, this).Select(s => s.Trim()).Where(s => s.Length > 5 && s.Substring(0, 6) == "SIMCOM").ToArray().FirstOrDefault<string>() ?? "";
             if (result != "" && result != null && result != "ERROR")
                 SIMModel = result;
             else
@@ -168,11 +168,11 @@ namespace SMS_Service.Models
 
             /*GETTING THE SIM NUMBER*/
             _SPort.WriteLine("AT+CNUM");
-            string[] results = ( Helpers.ResultHelper.getPortResults(_SPort, 400, this).Select(s => s.Trim()).Where(s => s.Length > 5 && s.Substring(0, 5) == "+CNUM").ToArray().FirstOrDefault<string>() ?? "").Replace('"', ' ').Split(',').Where(s => s.Trim() != String.Empty).Select(s => s.Trim()).ToArray<string>();//.Where(str => str.Trim().Substring("+CNUM";
+            string[] results = (Helpers.ResultHelper.getPortResults(_SPort, 400, this).Select(s => s.Trim()).Where(s => s.Length > 5 && s.Substring(0, 5) == "+CNUM").ToArray().FirstOrDefault<string>() ?? "").Replace('"', ' ').Split(',').Where(s => s.Trim() != String.Empty).Select(s => s.Trim()).ToArray<string>();//.Where(str => str.Trim().Substring("+CNUM";
 
             ContactNumber = null;
             if (results.Length > 1)
-                 ContactNumber = results[1];
+                ContactNumber = results[1];
             else
             {
                 IsReconnecting = false;
@@ -183,26 +183,22 @@ namespace SMS_Service.Models
 
             /*GETTING THE DEVICE Mobile Network */
             _SPort.WriteLine("AT+COPS?");
-             results = ( Helpers.ResultHelper.getPortResults(_SPort, 400, this).Select(s => s.Trim()).Where(s => s.Length > 5 && s.Substring(0, 5) == "+COPS").ToArray().FirstOrDefault<string>() ?? "").Replace('"', ' ').Split(',').Where(s => s.Trim() != String.Empty).Select(s => s.Trim()).ToArray<string>();//.Where(str => str.Trim().Substring("+CNUM";
+            results = (Helpers.ResultHelper.getPortResults(_SPort, 400, this).Select(s => s.Trim()).Where(s => s.Length > 5 && s.Substring(0, 5) == "+COPS").ToArray().FirstOrDefault<string>() ?? "").Replace('"', ' ').Split(',').Where(s => s.Trim() != String.Empty).Select(s => s.Trim()).ToArray<string>();//.Where(str => str.Trim().Substring("+CNUM";
 
 
             //OTHER SETTINGS
             //AT+CNMI=2 = for new message notification
             _SPort.WriteLine("AT+CNMI=2");
+            _SPort.WriteLine("AT+CMGF=1");
             Helpers.ResultHelper.getPortResults(_SPort, 100, this);
 
-
-
+            
             //_SPort.Close();
-
-
-
-
             Network = null;
             if (result.Length > 2)
-                 Network = (results[2] ?? "").Trim();
+                Network = (results[2] ?? "").Trim();
 
-            if(Network == "" || Network == null)
+            if (Network == "" || Network == null)
             {
                 IsReconnecting = false;
                 _SPort.Close();
@@ -213,6 +209,9 @@ namespace SMS_Service.Models
 
             IsReconnecting = false;
             ErrorCount = 0;
+            if (GlobalHelpers.MainForm != null)
+                this.DeviceNotify = GlobalHelpers.MainForm.Notifcation;
+
 
 
             //_SPort.Close();

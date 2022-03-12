@@ -15,7 +15,7 @@ namespace SMS_Service.Helpers
         {
             if (!port.IsOpen)
             {
-                throw new Exception("Port should be opened outside inside this function.");
+                //throw new Exception("Port should be opened outside inside this function.");
                 return null;
             }
             string str = getPortResults(port, delay, sim_device).LastOrDefault<string>() ?? "";
@@ -31,7 +31,7 @@ namespace SMS_Service.Helpers
             }
 
             string[] result = new string[0];
-            string str = getRawData( port,  delay, sim_device);// Encoding.ASCII.GetString(buff) ?? "";
+            string str = getRawData(port, delay, sim_device);// Encoding.ASCII.GetString(buff) ?? "";
             result = str.Trim().Split('\n').Where(s => s.Trim() != "" && s != null).Select(s => s.Trim()).ToArray<string>();
 
             /*
@@ -86,7 +86,7 @@ namespace SMS_Service.Helpers
             //if (sim_device != null)
             //{
             List<String> results = str.Split('\n').ToList();
-            
+
             bool _hasOK = false;
             for (int i = results.Count - 1; i >= 0; i--)
             {
@@ -110,11 +110,11 @@ namespace SMS_Service.Helpers
                     }
                 }
             }
-            for(int i = results.Count - 1; i>=0; i--)
+            for (int i = results.Count - 1; i >= 0; i--)
             {
                 String s = (results[i] ?? "").Trim();
 
-                if(s == "OK")
+                if (s == "OK")
                 {
                     break;
                 }
@@ -134,6 +134,9 @@ namespace SMS_Service.Helpers
 
             //return str;
         }
+        
+
+
 
     }
 }
