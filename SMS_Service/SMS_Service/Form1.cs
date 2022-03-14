@@ -611,137 +611,141 @@ namespace SMS_Service
 
         private void SendMessagesToMobileTimer_Tick(object sender, EventArgs e)
         {
-            SendMessageStageForSendingMobileTimer.Enabled = false;
-            if (MySQL.Connected && MySQL.IsBusy == false)
+            if (MySQL.Connected == false && MySQL.IsBusy)
             {
+                return;
+            }
+            SendMessageStageForSendingMobileTimer.Enabled = false;
 
-                List<SentMessageStatusModel> sentStatusList = new List<SentMessageStatusModel>();
+            List<SentMessageStatusModel> sentStatusList = new List<SentMessageStatusModel>();
 
-                //GET DATATABLE ROW SEND
-                foreach(DataGridViewRow row in dataGridView1.Rows)
+            //GET DATATABLE ROW SEND
+            foreach (DataGridViewRow row in dataGridView1.Rows)
+            {
+                SMSDataModel sms = row.Tag as SMSDataModel;
+                if (sms == null) continue;
+
+                if (sms.DataID > 0 && sms.ActionType == ActionTypes.Send && sms.StatusUpdating == false)
                 {
-                    SMSDataModel sms = row.Tag as SMSDataModel;
-                    if (sms == null) continue;
-
-                    if (sms.DataID > 0 && sms.ActionType == ActionTypes.Send && sms.StatusUpdating == false)
+                    SentMessageStatusModel _stat = new SentMessageStatusModel();
+                    _stat.id = sms.DataID;
+                    _stat.sender_no = sms.SenderCNumber;
+                    _stat.sent_mobile_at = sms.SendLastAttempt.ToString("MM/dd/yyyy hh:mm:ss tt");// sms.ActionDateTime;
+                    if (sms.MStatus == MStatusTypes.Success)
                     {
-                        SentMessageStatusModel _stat = new SentMessageStatusModel();
-                        _stat.id = sms.DataID;
-                        _stat.sender_no = sms.SenderCNumber;
-                        _stat.sent_mobile_at = sms.SendLastAttempt.ToString("MM/dd/yyyy hh:mm:ss tt");// sms.ActionDateTime;
-                        if (sms.MStatus == MStatusTypes.Success)
-                        {
-                            _stat.status_id = 2;
-                        }
-                        else if (sms.MStatus == MStatusTypes.Failed && sms.SendFailedCount >= 3)
-                        {
-                            _stat.status_id = 3;
-                        }
-                        else if (sms.MStatus == MStatusTypes.Failed && sms.SendingType == SendingTypes.DynamicDeviceCNumber && sms.SendFailedCount >= 3)
-                        {
-                            _stat.status_id = 3;
-                        }
-                        else if (sms.MStatus == MStatusTypes.Failed && sms.SendingType == SendingTypes.None && sms.SendFailedCount == 1)
-                            _stat.status_id = 3;
-
-                        if (_stat.status_id > 1)
-                        {
-                            sms.StatusUpdating = true;
-                            sentStatusList.Add(_stat);
-                        }
+                        _stat.status_id = 2;
                     }
+                    else if (sms.MStatus == MStatusTypes.Failed && sms.SendFailedCount >= 3)
+                    {
+                        _stat.status_id = 3;
+                    }
+                    else if (sms.MStatus == MStatusTypes.Failed && sms.SendingType == SendingTypes.DynamicDeviceCNumber && sms.SendFailedCount >= 3)
+                    {
+                        _stat.status_id = 3;
+                    }
+                    else if (sms.MStatus == MStatusTypes.Failed && sms.SendingType == SendingTypes.None && sms.SendFailedCount == 1)
+                        _stat.status_id = 3;
 
+                    if (_stat.status_id > 1)
+                    {
+                        sms.StatusUpdating = true;
+                        sentStatusList.Add(_stat);
+                    }
                 }
 
+            }
 
 
-                BackgroundWorker bg = new BackgroundWorker();
-                bg.DoWork += (sen, evt) =>
+
+            BackgroundWorker bg = new BackgroundWorker();
+            bg.DoWork += (sen, evt) =>
+            {
+                int activeDeviceCount = GlobalHelpers.ActiveSIMDeviceList.Count();
+                if (activeDeviceCount == 0)
                 {
-                    int activeDeviceCount = GlobalHelpers.ActiveSIMDeviceList.Count();
-                    if (activeDeviceCount == 0)
+                    this.Invoke(new Action(() => { SendMessageStageForSendingMobileTimer.Enabled = true; }));
+                    return;
+                }
+
+                List<Models.ToSendMessageModel> toSendList = MySQL.GetToSendMessages(sentStatusList);
+
+                this.Invoke(new Action(() =>
+                {
+
+                    foreach (SentMessageStatusModel sentItem in sentStatusList)
                     {
-                        this.Invoke(new Action(() => { SendMessageStageForSendingMobileTimer.Enabled = true; }));
-                        return;
-                    }
-                
-                    List<Models.ToSendMessageModel> toSendList = MySQL.GetToSendMessages(sentStatusList);
-
-                    this.Invoke(new Action(() => {
-
-                        foreach (SentMessageStatusModel sentItem in sentStatusList)
+                        foreach (DataGridViewRow row in dataGridView1.Rows)
                         {
-                            foreach (DataGridViewRow row in dataGridView1.Rows)
-                            {
-                                SMSDataModel sms = row.Tag as SMSDataModel;
-                                if (sms == null) continue;
+                            SMSDataModel sms = row.Tag as SMSDataModel;
+                            if (sms == null) continue;
 
-                                if (sentItem.id == sms.DataID)
-                                    dataGridView1.Rows.Remove(row);
-                            }
+                            if (sentItem.id == sms.DataID)
+                                dataGridView1.Rows.Remove(row);
                         }
+                    }
 
 
 
-                    }));
+                }));
 
                     //CONVERT TO toSendMessagesinto
 
                     List<Models.SMSDataModel> smsdataList = new List<SMSDataModel>();
-                    for(int i = 0; i < toSendList.Count; i++)
-                    {
-                        var toSendItem = toSendList[i];
-                        SIMDeviceModel device = null;
-                        SendingTypes sendType = SendingTypes.None;
+                for (int i = 0; i < toSendList.Count; i++)
+                {
+                    var toSendItem = toSendList[i];
+                    SIMDeviceModel device = null;
+                    SendingTypes sendType = SendingTypes.None;
                         //for Static
                         if (toSendItem.sending_type_id == 1)
-                        {
+                    {
                             //get the device
                             var matchItem = GlobalHelpers.ActiveSIMDeviceList.Where(s => (s.ContactNumber ?? "").Length > 10 && toSendItem.sender_no.Length > 10 && s.ContactNumber.Substring(s.ContactNumber.Length - 10) == toSendItem.sender_no.Substring(toSendItem.sender_no.Length - 10)).FirstOrDefault();
-                            if (matchItem != null)
-                            {
-                                device = matchItem;
-                                sendType = SendingTypes.StaticDeviceCNumber;
-                            }
-                            else
-                            {
-                                //IF Not Active..
-                                PendingToSendStatic.Add(toSendItem);
-                                continue;
-                            }
+                        if (matchItem != null)
+                        {
+                            device = matchItem;
+                            sendType = SendingTypes.StaticDeviceCNumber;
                         }
                         else
                         {
+                                //IF Not Active..
+                                PendingToSendStatic.Add(toSendItem);
+                            continue;
+                        }
+                    }
+                    else
+                    {
                             //for Dynamic
                             device = GlobalHelpers.ActiveSIMDeviceList.ElementAt(i % activeDeviceCount);
-                            if (toSendItem.sending_type_id <= 2)
-                                sendType = SendingTypes.DynamicDeviceCNumber;
-                            else
-                                sendType = SendingTypes.None;
-                        }
-
-
-                        SMSDataModel smsItem = new SMSDataModel(device, toSendItem.receiver_no, toSendItem.message, sendType);
-                        smsItem.DataID = toSendItem.id;
-                        smsdataList.Add(smsItem);
-
+                        if (toSendItem.sending_type_id <= 2)
+                            sendType = SendingTypes.DynamicDeviceCNumber;
+                        else
+                            sendType = SendingTypes.None;
                     }
 
-                    System.Threading.Thread.Sleep(500);
-                    this.Invoke(new Action(() => {
-                        
+
+                    SMSDataModel smsItem = new SMSDataModel(device, toSendItem.receiver_no, toSendItem.message, sendType);
+                    smsItem.DataID = toSendItem.id;
+                    smsdataList.Add(smsItem);
+
+                }
+
+                System.Threading.Thread.Sleep(500);
+                this.Invoke(new Action(() =>
+                {
+
                         //Adding Row
                         foreach (var sms in smsdataList)
-                        {
-                            addOrSetRow(sms);
-                        }
+                    {
+                        addOrSetRow(sms);
+                    }
 
-                        SendMessageStageForSendingMobileTimer.Enabled = true;
-                    }));
-                   
-                };
-                bg.RunWorkerAsync();
-            }
+                    SendMessageStageForSendingMobileTimer.Enabled = true;
+                }));
+
+            };
+            bg.RunWorkerAsync();
+
         }
     }
 }
