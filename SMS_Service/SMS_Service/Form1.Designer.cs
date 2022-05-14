@@ -79,7 +79,7 @@
             this.textBox2.Location = new System.Drawing.Point(10, 150);
             this.textBox2.Multiline = true;
             this.textBox2.Name = "textBox2";
-            this.textBox2.Size = new System.Drawing.Size(165, 83);
+            this.textBox2.Size = new System.Drawing.Size(165, 90);
             this.textBox2.TabIndex = 5;
             this.textBox2.Text = "This is my testing sample\r\nHow does it work?";
             // 
@@ -93,7 +93,7 @@
             // 
             // button1
             // 
-            this.button1.Location = new System.Drawing.Point(100, 237);
+            this.button1.Location = new System.Drawing.Point(100, 246);
             this.button1.Name = "button1";
             this.button1.Size = new System.Drawing.Size(75, 23);
             this.button1.TabIndex = 3;
@@ -257,7 +257,7 @@
             // 
             // button3
             // 
-            this.button3.Location = new System.Drawing.Point(10, 262);
+            this.button3.Location = new System.Drawing.Point(10, 271);
             this.button3.Name = "button3";
             this.button3.Size = new System.Drawing.Size(165, 23);
             this.button3.TabIndex = 13;
@@ -389,7 +389,7 @@
             // 
             // button5
             // 
-            this.button5.Location = new System.Drawing.Point(10, 237);
+            this.button5.Location = new System.Drawing.Point(10, 246);
             this.button5.Name = "button5";
             this.button5.Size = new System.Drawing.Size(84, 23);
             this.button5.TabIndex = 17;
