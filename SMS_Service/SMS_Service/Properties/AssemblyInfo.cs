@@ -6,9 +6,9 @@ using System.Runtime.InteropServices;
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
 [assembly: AssemblyTitle("SMS_Service")]
-[assembly: AssemblyDescription("")]
+[assembly: AssemblyDescription("Use to send sms messages")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("")]
+[assembly: AssemblyCompany("Sportscity, Inc.")]
 [assembly: AssemblyProduct("SMS_Service")]
 [assembly: AssemblyCopyright("Copyright ©  2022")]
 [assembly: AssemblyTrademark("")]
